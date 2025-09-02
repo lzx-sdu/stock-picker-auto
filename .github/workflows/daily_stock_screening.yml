@@ -5,6 +5,11 @@ on:
   push:
     branches: [ main ]
 
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
 jobs:
   stock-screening:
     runs-on: ubuntu-latest
@@ -12,7 +17,9 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-      
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        
     - name: Set up Python
       uses: actions/setup-python@v4
       with:
@@ -21,18 +28,13 @@ jobs:
     - name: Install system dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential git
+        sudo apt-get install -y build-essential
         
     - name: Install Python dependencies
       run: |
         python -m pip install --upgrade pip
         pip install --upgrade setuptools wheel
         pip install pandas numpy pyyaml
-        
-    - name: Configure Git
-      run: |
-        git config --global user.name "GitHub Actions"
-        git config --global user.email "actions@github.com"
         
     - name: Create directories
       run: |
@@ -45,14 +47,10 @@ jobs:
         pwd
         echo "=== 文件列表 ==="
         ls -la
-        echo "=== src目录 ==="
-        ls -la src/
         echo "=== Python版本 ==="
         python --version
         echo "=== Python路径 ==="
         python -c "import sys; print(sys.path)"
-        echo "=== Git版本 ==="
-        git --version
         
     - name: Run stock screening
       run: |
@@ -68,6 +66,40 @@ jobs:
         echo "=== 报告文件 ==="
         ls -la results/reports/
         
+    - name: Create index page
+      run: |
+        cat > index.html << 'EOF'
+        <!DOCTYPE html>
+        <html lang="zh-CN">
+        <head>
+            <meta charset="UTF-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>股票筛选结果</title>
+            <style>
+                body { font-family: Arial, sans-serif; margin: 20px; }
+                .header { background: #007bff; color: white; padding: 20px; text-align: center; }
+                .content { margin: 20px 0; }
+                .file-list { background: #f8f9fa; padding: 15px; border-radius: 5px; }
+                a { color: #007bff; text-decoration: none; }
+                a:hover { text-decoration: underline; }
+            </style>
+        </head>
+        <body>
+            <div class="header">
+                <h1>📈 股票筛选结果</h1>
+                <p>最后更新: $(date)</p>
+            </div>
+            <div class="content">
+                <div class="file-list">
+                    <h2>📊 最新报告</h2>
+                    <p><a href="results/reports/">查看所有报告</a></p>
+                    <p><a href="results/picks/">查看筛选结果</a></p>
+                </div>
+            </div>
+        </body>
+        </html>
+        EOF
+        
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
       with:
@@ -75,5 +107,3 @@ jobs:
         publish_dir: .
         publish_branch: gh-pages
         force_orphan: true
-        user_name: 'GitHub Actions'
-        user_email: 'actions@github.com'
