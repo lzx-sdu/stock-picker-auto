@@ -11,23 +11,49 @@ from datetime import datetime
 import yaml
 
 # 添加src目录到路径
-sys.path.append(os.path.join(os.path.dirname(__file__), 'src'))
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_path = os.path.join(current_dir, 'src')
+sys.path.insert(0, src_path)
 
-from strategy.bollinger_mean_reversion import BollingerMeanReversionStrategy
-from analysis.stock_screener import StockScreener
-from analysis.report_generator import ReportGenerator
-from utils.config import Config
+print(f"当前工作目录: {os.getcwd()}")
+print(f"Python路径: {sys.path}")
+print(f"src目录路径: {src_path}")
+print(f"src目录是否存在: {os.path.exists(src_path)}")
+
+try:
+    from strategy.bollinger_mean_reversion import BollingerMeanReversionStrategy
+    from analysis.stock_screener import StockScreener
+    from analysis.report_generator import ReportGenerator
+    from utils.config import Config
+    print("✅ 所有模块导入成功")
+except ImportError as e:
+    print(f"❌ 模块导入失败: {e}")
+    print("尝试列出src目录内容:")
+    if os.path.exists(src_path):
+        print(f"src目录内容: {os.listdir(src_path)}")
+        for subdir in ['strategy', 'analysis', 'utils']:
+            subdir_path = os.path.join(src_path, subdir)
+            if os.path.exists(subdir_path):
+                print(f"{subdir}目录内容: {os.listdir(subdir_path)}")
+            else:
+                print(f"{subdir}目录不存在: {subdir_path}")
+    sys.exit(1)
 
 class BollingerStrategyRunner:
     """布林带策略运行器"""
     
     def __init__(self):
         """初始化"""
-        self.config = Config()
-        self.strategy = BollingerMeanReversionStrategy(self.config)
-        self.screener = StockScreener()
-        self.report_generator = ReportGenerator()
-        
+        try:
+            self.config = Config()
+            self.strategy = BollingerMeanReversionStrategy(self.config)
+            self.screener = StockScreener()
+            self.report_generator = ReportGenerator()
+            print("✅ 策略运行器初始化成功")
+        except Exception as e:
+            print(f"❌ 策略运行器初始化失败: {e}")
+            raise
+    
     def run_strategy(self, max_stocks=500):
         """运行策略"""
         print("🚀 开始运行布林带均值回归策略...")
@@ -83,6 +109,8 @@ class BollingerStrategyRunner:
             
         except Exception as e:
             print(f"❌ 策略运行失败: {str(e)}")
+            import traceback
+            traceback.print_exc()
             return None
     
     def _generate_portfolio(self, screened_stocks):
