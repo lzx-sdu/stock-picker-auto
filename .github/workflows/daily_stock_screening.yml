@@ -76,15 +76,16 @@ jobs:
         # 检查文件是否存在
         if [ -f "$PICKS_FILE" ]; then
           echo "✅ 找到筛选结果文件: $PICKS_FILE"
-          # 读取CSV数据并转换为JSON
-          python -c "
+          
+          # 创建Python脚本文件
+          cat > process_data.py << 'PYEOF'
 import pandas as pd
 import json
 import os
 
 # 读取筛选结果
-picks_file = '$PICKS_FILE'
-portfolio_file = '$PORTFOLIO_FILE'
+picks_file = os.environ.get('PICKS_FILE', '')
+portfolio_file = os.environ.get('PORTFOLIO_FILE', '')
 
 if os.path.exists(picks_file):
     picks_df = pd.read_csv(picks_file)
@@ -132,7 +133,10 @@ if os.path.exists(picks_file):
     print(f'✅ 生成了 {len(portfolio_data)} 个投资组合')
 else:
     print('❌ 筛选结果文件不存在')
-"
+PYEOF
+
+          # 运行Python脚本
+          PICKS_FILE="$PICKS_FILE" PORTFOLIO_FILE="$PORTFOLIO_FILE" python process_data.py
         else
           echo "❌ 筛选结果文件不存在: $PICKS_FILE"
         fi
