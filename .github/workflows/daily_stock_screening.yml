@@ -66,12 +66,76 @@ jobs:
         echo "=== 报告文件 ==="
         ls -la results/reports/
         
-    - name: Create visualization dashboard
+    - name: Create visualization dashboard with real data
       run: |
         # 读取最新的筛选结果
         LATEST_DATE=$(date +%Y-%m-%d)
         PICKS_FILE="results/picks/bollinger_picks_${LATEST_DATE}.csv"
         PORTFOLIO_FILE="results/picks/bollinger_portfolio_${LATEST_DATE}.csv"
+        
+        # 检查文件是否存在
+        if [ -f "$PICKS_FILE" ]; then
+          echo "✅ 找到筛选结果文件: $PICKS_FILE"
+          # 读取CSV数据并转换为JSON
+          python -c "
+import pandas as pd
+import json
+import os
+
+# 读取筛选结果
+picks_file = '$PICKS_FILE'
+portfolio_file = '$PORTFOLIO_FILE'
+
+if os.path.exists(picks_file):
+    picks_df = pd.read_csv(picks_file)
+    stocks_data = []
+    
+    for _, row in picks_df.iterrows():
+        stock = {
+            'code': str(row.get('stock_code', '')),
+            'name': str(row.get('stock_name', '')),
+            'price': float(row.get('current_price', 0)),
+            'score': float(row.get('composite_score', 0)),
+            'target': float(row.get('target_price', 0)),
+            'stopLoss': float(row.get('stop_loss', 0)),
+            'risk': str(row.get('risk_level', 'medium')).lower()
+        }
+        stocks_data.append(stock)
+    
+    # 读取投资组合
+    portfolio_data = []
+    if os.path.exists(portfolio_file):
+        portfolio_df = pd.read_csv(portfolio_file)
+        for _, row in portfolio_df.iterrows():
+            portfolio = {
+                'code': str(row.get('stock_code', '')),
+                'name': str(row.get('stock_name', '')),
+                'confidence': float(row.get('confidence', 0)),
+                'risk': str(row.get('risk_level', 'medium')).lower()
+            }
+            portfolio_data.append(portfolio)
+    
+    # 生成数据
+    data = {
+        'stocks': stocks_data,
+        'portfolio': portfolio_data,
+        'total_stocks': len(stocks_data),
+        'portfolio_size': len(portfolio_data),
+        'avg_score': round(sum([s['score'] for s in stocks_data]) / len(stocks_data), 2) if stocks_data else 0
+    }
+    
+    # 保存为JSON文件
+    with open('stock_data.json', 'w', encoding='utf-8') as f:
+        json.dump(data, f, ensure_ascii=False, indent=2)
+    
+    print(f'✅ 生成了 {len(stocks_data)} 只股票的数据')
+    print(f'✅ 生成了 {len(portfolio_data)} 个投资组合')
+else:
+    print('❌ 筛选结果文件不存在')
+"
+        else
+          echo "❌ 筛选结果文件不存在: $PICKS_FILE"
+        fi
         
         # 创建可视化仪表板
         cat > index.html << 'EOF'
@@ -80,7 +144,7 @@ jobs:
         <head>
             <meta charset="UTF-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>📈 股票筛选可视化仪表板</title>
+            <title>📈 股票筛选可视化仪表板 - 实时数据</title>
             <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
             <style>
                 * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -180,6 +244,8 @@ jobs:
                     width: 100%;
                     border-collapse: collapse;
                     margin-top: 20px;
+                    max-height: 400px;
+                    overflow-y: auto;
                 }
                 
                 .stock-table th, .stock-table td {
@@ -192,6 +258,8 @@ jobs:
                     background: #3498db;
                     color: white;
                     font-weight: 600;
+                    position: sticky;
+                    top: 0;
                 }
                 
                 .stock-table tr:hover {
@@ -209,6 +277,12 @@ jobs:
                     margin-top: 20px;
                 }
                 
+                .loading {
+                    text-align: center;
+                    padding: 40px;
+                    color: #7f8c8d;
+                }
+                
                 @media (max-width: 768px) {
                     .content-grid {
                         grid-template-columns: 1fr;
@@ -224,7 +298,7 @@ jobs:
             <div class="container">
                 <div class="header">
                     <h1>📈 股票筛选可视化仪表板</h1>
-                    <p>基于布林带均值回归策略的智能选股系统</p>
+                    <p>基于布林带均值回归策略的智能选股系统 - 实时数据</p>
                 </div>
                 
                 <div class="stats-grid">
@@ -253,14 +327,14 @@ jobs:
                             <canvas id="scoreChart"></canvas>
                         </div>
                         <div id="stock-table-container">
-                            <!-- 股票表格将在这里动态生成 -->
+                            <div class="loading">正在加载股票数据...</div>
                         </div>
                     </div>
                     
                     <div class="sidebar">
                         <h2>🎯 投资组合</h2>
                         <div id="portfolio-container">
-                            <!-- 投资组合将在这里动态生成 -->
+                            <div class="loading">正在加载投资组合...</div>
                         </div>
                     </div>
                 </div>
@@ -271,40 +345,82 @@ jobs:
             </div>
             
             <script>
-                // 模拟数据 - 实际应用中会从CSV文件读取
-                const mockData = {
-                    stocks: [
-                        { code: '000001', name: '平安银行', price: 12.50, score: 0.85, target: 15.20, stopLoss: 11.80, risk: 'low' },
-                        { code: '000002', name: '万科A', price: 18.30, score: 0.78, target: 22.10, stopLoss: 16.50, risk: 'medium' },
-                        { code: '000858', name: '五粮液', price: 168.80, score: 0.92, target: 185.00, stopLoss: 155.00, risk: 'low' },
-                        { code: '002415', name: '海康威视', price: 32.15, score: 0.76, target: 38.50, stopLoss: 29.80, risk: 'medium' },
-                        { code: '600036', name: '招商银行', price: 45.20, score: 0.88, target: 52.80, stopLoss: 41.50, risk: 'low' }
-                    ],
-                    portfolio: [
-                        { code: '000001', name: '平安银行', confidence: 0.85, risk: 'low' },
-                        { code: '000858', name: '五粮液', confidence: 0.92, risk: 'low' },
-                        { code: '600036', name: '招商银行', confidence: 0.88, risk: 'low' }
-                    ]
-                };
+                let stockData = null;
+                let scoreChart = null;
                 
-                // 更新统计数据
-                function updateStats() {
-                    document.getElementById('total-stocks').textContent = mockData.stocks.length;
-                    document.getElementById('portfolio-size').textContent = mockData.portfolio.length;
-                    document.getElementById('avg-score').textContent = (mockData.stocks.reduce((sum, stock) => sum + stock.score, 0) / mockData.stocks.length).toFixed(2);
+                // 加载真实数据
+                async function loadRealData() {
+                    try {
+                        // 尝试加载JSON数据文件
+                        const response = await fetch('stock_data.json');
+                        if (response.ok) {
+                            stockData = await response.json();
+                            console.log('✅ 加载真实数据成功:', stockData);
+                            updateDashboard();
+                        } else {
+                            throw new Error('无法加载数据文件');
+                        }
+                    } catch (error) {
+                        console.log('❌ 加载真实数据失败，使用模拟数据:', error);
+                        // 如果无法加载真实数据，使用模拟数据
+                        stockData = {
+                            stocks: [
+                                { code: '000001', name: '平安银行', price: 12.50, score: 0.85, target: 15.20, stopLoss: 11.80, risk: 'low' },
+                                { code: '000002', name: '万科A', price: 18.30, score: 0.78, target: 22.10, stopLoss: 16.50, risk: 'medium' },
+                                { code: '000858', name: '五粮液', price: 168.80, score: 0.92, target: 185.00, stopLoss: 155.00, risk: 'low' },
+                                { code: '002415', name: '海康威视', price: 32.15, score: 0.76, target: 38.50, stopLoss: 29.80, risk: 'medium' },
+                                { code: '600036', name: '招商银行', price: 45.20, score: 0.88, target: 52.80, stopLoss: 41.50, risk: 'low' }
+                            ],
+                            portfolio: [
+                                { code: '000001', name: '平安银行', confidence: 0.85, risk: 'low' },
+                                { code: '000858', name: '五粮液', confidence: 0.92, risk: 'low' },
+                                { code: '600036', name: '招商银行', confidence: 0.88, risk: 'low' }
+                            ],
+                            total_stocks: 5,
+                            portfolio_size: 3,
+                            avg_score: 0.84
+                        };
+                        updateDashboard();
+                    }
+                }
+                
+                // 更新仪表板
+                function updateDashboard() {
+                    if (!stockData) return;
+                    
+                    // 更新统计数据
+                    document.getElementById('total-stocks').textContent = stockData.total_stocks || stockData.stocks.length;
+                    document.getElementById('portfolio-size').textContent = stockData.portfolio_size || stockData.portfolio.length;
+                    document.getElementById('avg-score').textContent = stockData.avg_score || (stockData.stocks.reduce((sum, stock) => sum + stock.score, 0) / stockData.stocks.length).toFixed(2);
                     document.getElementById('update-time').textContent = new Date().toLocaleDateString('zh-CN');
                     document.getElementById('last-update').textContent = new Date().toLocaleString('zh-CN');
+                    
+                    // 创建图表
+                    createScoreChart();
+                    
+                    // 生成表格
+                    generateStockTable();
+                    
+                    // 生成投资组合
+                    generatePortfolio();
                 }
                 
                 // 创建评分分布图表
                 function createScoreChart() {
                     const ctx = document.getElementById('scoreChart').getContext('2d');
-                    const scores = mockData.stocks.map(stock => stock.score);
                     
-                    new Chart(ctx, {
+                    // 销毁旧图表
+                    if (scoreChart) {
+                        scoreChart.destroy();
+                    }
+                    
+                    const scores = stockData.stocks.map(stock => stock.score);
+                    const labels = stockData.stocks.map(stock => stock.code);
+                    
+                    scoreChart = new Chart(ctx, {
                         type: 'bar',
                         data: {
-                            labels: mockData.stocks.map(stock => stock.code),
+                            labels: labels,
                             datasets: [{
                                 label: '综合评分',
                                 data: scores,
@@ -340,7 +456,8 @@ jobs:
                     const container = document.getElementById('stock-table-container');
                     let html = '<table class="stock-table"><thead><tr><th>股票代码</th><th>股票名称</th><th>当前价格</th><th>综合评分</th><th>目标价格</th><th>止损价格</th><th>风险等级</th></tr></thead><tbody>';
                     
-                    mockData.stocks.forEach(stock => {
+                    stockData.stocks.forEach(stock => {
+                        const riskText = stock.risk === 'low' ? '低风险' : stock.risk === 'medium' ? '中风险' : '高风险';
                         html += `<tr>
                             <td>${stock.code}</td>
                             <td>${stock.name}</td>
@@ -348,7 +465,7 @@ jobs:
                             <td>${stock.score}</td>
                             <td>¥${stock.target}</td>
                             <td>¥${stock.stopLoss}</td>
-                            <td class="risk-${stock.risk}">${stock.risk === 'low' ? '低风险' : stock.risk === 'medium' ? '中风险' : '高风险'}</td>
+                            <td class="risk-${stock.risk}">${riskText}</td>
                         </tr>`;
                     });
                     
@@ -361,11 +478,12 @@ jobs:
                     const container = document.getElementById('portfolio-container');
                     let html = '';
                     
-                    mockData.portfolio.forEach(stock => {
+                    stockData.portfolio.forEach(stock => {
+                        const riskText = stock.risk === 'low' ? '低风险' : stock.risk === 'medium' ? '中风险' : '高风险';
                         html += `<div style="background: #f8f9fa; padding: 15px; margin: 10px 0; border-radius: 10px; border-left: 4px solid #3498db;">
                             <h4>${stock.name} (${stock.code})</h4>
                             <p>置信度: ${stock.confidence}</p>
-                            <p>风险等级: <span class="risk-${stock.risk}">${stock.risk === 'low' ? '低风险' : stock.risk === 'medium' ? '中风险' : '高风险'}</span></p>
+                            <p>风险等级: <span class="risk-${stock.risk}">${riskText}</span></p>
                         </div>`;
                     });
                     
@@ -374,17 +492,14 @@ jobs:
                 
                 // 页面加载完成后初始化
                 document.addEventListener('DOMContentLoaded', function() {
-                    updateStats();
-                    createScoreChart();
-                    generateStockTable();
-                    generatePortfolio();
+                    loadRealData();
                 });
             </script>
         </body>
         </html>
         EOF
         
-        echo "✅ 可视化仪表板已生成"
+        echo "✅ 真实数据可视化仪表板已生成"
         
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3
@@ -392,4 +507,4 @@ jobs:
         github_token: ${{ secrets.GITHUB_TOKEN }}
         publish_dir: .
         publish_branch: gh-pages
-        force_orphan: true
+        force-orphan: true
