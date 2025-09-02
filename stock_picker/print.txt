@@ -1,0 +1,54 @@
+stock_picker 项目当前主要功能与运行方式如下：
+
+---
+
+【项目简介】
+这是一个基于布林带（Bollinger Bands）均值回归策略的A股选股系统。通过分析股票价格相对于布林带的位置，识别可能回归均值的投资机会。
+
+【主要功能】
+1. 数据获取
+   - 自动获取A股股票列表及历史行情数据。
+   - 命令：
+     python main.py --mode data --update-stock-list
+
+2. 选股分析
+   - 基于布林带均值回归策略进行选股，结合RSI、MACD等技术指标和成交量确认。
+   - 命令：
+     python main.py --mode screen --strategy bollinger
+
+3. 报告生成
+   - 自动生成选股分析报告（HTML格式）。
+   - 命令：
+     python main.py --mode report --date 2024-01-15
+
+【项目结构（核心部分）】
+- src/：核心代码模块
+  - data/stock_data.py：股票数据管理
+  - analysis/bollinger_bands.py：布林带计算
+  - analysis/stock_screener.py：股票筛选器
+  - analysis/report_generator.py：报告生成器
+  - strategy/mean_reversion.py：均值回归策略
+  - utils/config.py：配置管理
+  - utils/logger.py：日志管理
+- data/：数据存储
+- results/：结果输出
+- logs/：日志目录
+- config.yaml：配置文件
+- requirements.txt：依赖文件
+- main.py：主程序入口
+
+【依赖环境】
+- Python 3.13.6
+- pandas、numpy、akshare、TA-Lib、matplotlib、PyYAML 等
+
+安装依赖：
+pip install -r requirements.txt
+
+【当前状态】
+- 所有核心模块已开发完成并通过基础测试，系统可正常启动和运行。
+- 主要功能（数据获取、选股分析、报告生成）均可用。
+- 后续计划包括：完善回测、可视化界面、风险管理模块和性能优化。
+
+---
+
+如需更详细的功能说明或运行示例，请告知！

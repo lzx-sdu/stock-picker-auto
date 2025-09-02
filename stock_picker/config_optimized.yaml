@@ -1,0 +1,48 @@
+# 优化版配置文件
+optimization:
+  max_workers: 8        # 并发线程数
+  batch_size: 20        # 批处理大小
+  cache_enabled: true   # 启用缓存
+  timeout: 30           # 超时时间
+  max_stocks: 1000      # 最大处理股票数量（测试用）
+
+# 其他配置保持不变
+bollinger_bands:
+  period: 20
+  std_dev: 2.0
+  min_touch_ratio: 0.95
+
+screening:
+  price_conditions:
+    min_price: 5.0
+    max_price: 100.0
+    min_market_cap: 1000000000
+  technical_conditions:
+    rsi_oversold: 30
+    rsi_overbought: 70
+    volume_ratio: 1.5
+    macd_signal: true
+  risk_control:
+    max_drawdown: 0.15
+    stop_loss: 0.08
+    take_profit: 0.2
+
+data_sources:
+  primary: akshare
+  backup: yfinance
+
+stock_pool:
+  markets: [sh, sz]
+  exclude_st: true
+  exclude_new_stocks: true
+  min_listing_days: 365
+
+reporting:
+  output_dir: results/reports
+  format: html
+  include_charts: true
+
+logging:
+  level: INFO
+  file: logs/stock_picker.log
+  max_size: 10MB
