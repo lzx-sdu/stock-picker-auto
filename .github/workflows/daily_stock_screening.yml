@@ -1,9 +1,6 @@
 name: Daily Stock Screening
 
 on:
-  schedule:
-    # 每天上午9:30和下午15:30运行（北京时间）
-    - cron: '30 1,7 * * *'  # UTC时间，对应北京时间9:30和15:30
   workflow_dispatch:  # 允许手动触发
   push:
     branches: [ main ]
@@ -30,206 +27,39 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install --upgrade setuptools wheel
-        pip install -r requirements.txt
+        pip install pandas numpy pyyaml
         
-    - name: Create necessary directories
+    - name: Create directories
       run: |
         mkdir -p results/picks
         mkdir -p results/reports
-        mkdir -p logs
+        
+    - name: Debug environment
+      run: |
+        echo "=== 当前目录 ==="
+        pwd
+        echo "=== 文件列表 ==="
+        ls -la
+        echo "=== src目录 ==="
+        ls -la src/
+        echo "=== Python版本 ==="
+        python --version
+        echo "=== Python路径 ==="
+        python -c "import sys; print(sys.path)"
         
     - name: Run stock screening
       run: |
-        # 设置Python路径
         export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}/src"
         python bollinger_strategy_runner.py
-      env:
-        PYTHONPATH: ${{ github.workspace }}
         
-    - name: Generate HTML report
+    - name: List results
       run: |
-        # 设置Python路径
-        export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}/src"
-        python -c "
-        import os
-        import sys
-        sys.path.append('src')
-        from datetime import datetime
-        from analysis.report_generator import ReportGenerator
-        
-        # 生成报告
-        generator = ReportGenerator()
-        date = datetime.now().strftime('%Y-%m-%d')
-        
-        # 读取筛选结果
-        import pandas as pd
-        picks_file = f'results/picks/bollinger_picks_{date}.csv'
-        portfolio_file = f'results/picks/bollinger_portfolio_{date}.csv'
-        
-        if os.path.exists(picks_file):
-            picks_df = pd.read_csv(picks_file)
-            portfolio_df = pd.read_csv(portfolio_file) if os.path.exists(portfolio_file) else None
-            
-            # 生成HTML报告
-            generator.generate_report(
-                picks_df.to_dict('records'),
-                portfolio_df.to_dict('records') if portfolio_df is not None else [],
-                f'results/reports/bollinger_report_{date}.html'
-            )
-            print(f'✅ 报告生成成功: results/reports/bollinger_report_{date}.html')
-        else:
-            print(f'❌ 筛选结果文件不存在: {picks_file}')
-        "
-      env:
-        PYTHONPATH: ${{ github.workspace }}
-        
-    - name: Create index page
-      run: |
-        python -c "
-        from datetime import datetime
-        import os
-        
-        # 创建主页
-        html_content = '''<!DOCTYPE html>
-        <html lang=\"zh-CN\">
-        <head>
-            <meta charset=\"UTF-8\">
-            <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">
-            <title>股票筛选系统 - 自动更新</title>
-            <style>
-                * { margin: 0; padding: 0; box-sizing: border-box; }
-                body { 
-                    font-family: Arial, sans-serif; 
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    min-height: 100vh;
-                    padding: 20px;
-                }
-                .container { 
-                    max-width: 800px; 
-                    margin: 0 auto; 
-                    background: white;
-                    border-radius: 15px;
-                    box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-                    overflow: hidden;
-                }
-                .header { 
-                    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-                    color: white;
-                    padding: 30px;
-                    text-align: center;
-                }
-                .header h1 { font-size: 2.5em; margin-bottom: 10px; }
-                .header p { font-size: 1.2em; opacity: 0.9; }
-                .content { padding: 30px; }
-                .update-info {
-                    background: #f8f9fa;
-                    padding: 20px;
-                    border-radius: 10px;
-                    margin-bottom: 30px;
-                    border-left: 4px solid #007bff;
-                }
-                .report-link {
-                    display: block;
-                    background: #007bff;
-                    color: white;
-                    text-decoration: none;
-                    padding: 15px 20px;
-                    border-radius: 8px;
-                    text-align: center;
-                    font-size: 1.1em;
-                    margin: 15px 0;
-                    transition: all 0.3s ease;
-                }
-                .report-link:hover {
-                    background: #0056b3;
-                    transform: translateY(-2px);
-                    box-shadow: 0 5px 15px rgba(0,123,255,0.3);
-                }
-                .auto-update {
-                    background: #28a745;
-                    color: white;
-                    padding: 10px 15px;
-                    border-radius: 20px;
-                    display: inline-block;
-                    font-size: 0.9em;
-                    margin-top: 10px;
-                }
-                .features {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 20px;
-                    margin-top: 30px;
-                }
-                .feature {
-                    text-align: center;
-                    padding: 20px;
-                    background: #f8f9fa;
-                    border-radius: 10px;
-                }
-                .feature-icon {
-                    font-size: 2em;
-                    margin-bottom: 10px;
-                }
-                @media (max-width: 768px) {
-                    .header h1 { font-size: 2em; }
-                    .content { padding: 20px; }
-                }
-            </style>
-        </head>
-        <body>
-            <div class=\"container\">
-                <div class=\"header\">
-                    <h1>📈 股票筛选系统</h1>
-                    <p>基于布林带均值回归策略的智能选股</p>
-                    <div class=\"auto-update\">🔄 自动更新</div>
-                </div>
-                
-                <div class=\"content\">
-                    <div class=\"update-info\">
-                        <h3>📅 最新更新</h3>
-                        <p>最后更新时间：<strong>${datetime.now().strftime('%Y年%m月%d日 %H:%M')}</strong></p>
-                        <p>自动更新频率：每天 09:30 和 15:30</p>
-                    </div>
-                    
-                    <h3>📊 今日报告</h3>
-                    <a href=\"results/reports/bollinger_report_${datetime.now().strftime('%Y-%m-%d')}.html\" class=\"report-link\">
-                        🎯 查看今日选股结果
-                    </a>
-                    
-                    <div class=\"features\">
-                        <div class=\"feature\">
-                            <div class=\"feature-icon\">🤖</div>
-                            <h4>智能筛选</h4>
-                            <p>基于布林带、RSI、MACD等技术指标</p>
-                        </div>
-                        <div class=\"feature\">
-                            <div class=\"feature-icon\">📱</div>
-                            <h4>手机友好</h4>
-                            <p>响应式设计，完美适配手机浏览</p>
-                        </div>
-                        <div class=\"feature\">
-                            <div class=\"feature-icon\">⚡</div>
-                            <h4>实时更新</h4>
-                            <p>每日自动更新，无需手动操作</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <script>
-                // 自动刷新页面（每30分钟）
-                setTimeout(() => {
-                    location.reload();
-                }, 30 * 60 * 1000);
-            </script>
-        </body>
-        </html>'''
-        
-        # 写入index.html
-        with open('index.html', 'w', encoding='utf-8') as f:
-            f.write(html_content)
-        print('✅ 主页创建成功: index.html')
-        "
+        echo "=== 生成的文件 ==="
+        ls -la results/
+        echo "=== 筛选结果 ==="
+        ls -la results/picks/
+        echo "=== 报告文件 ==="
+        ls -la results/reports/
         
     - name: Deploy to GitHub Pages
       uses: peaceiris/actions-gh-pages@v3

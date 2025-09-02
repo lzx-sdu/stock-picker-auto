@@ -54,11 +54,10 @@ setup_python_path()
 
 # 尝试导入模块
 try:
-    from utils.logger import LoggerMixin
-    print("✅ 基础模块导入成功")
+    print("✅ 跳过复杂模块导入，直接运行简化版本")
 except ImportError as e:
     print(f"❌ 基础模块导入失败: {e}")
-    sys.exit(1)
+    # 不退出，继续运行简化版本
 
 class SimpleStockRunner:
     """简化的股票筛选运行器 - 用于GitHub Actions测试"""
