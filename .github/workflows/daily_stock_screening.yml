@@ -40,12 +40,16 @@ jobs:
         
     - name: Run stock screening
       run: |
+        # 设置Python路径
+        export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}/src"
         python bollinger_strategy_runner.py
       env:
         PYTHONPATH: ${{ github.workspace }}
         
     - name: Generate HTML report
       run: |
+        # 设置Python路径
+        export PYTHONPATH="${PYTHONPATH}:${GITHUB_WORKSPACE}/src"
         python -c "
         import os
         import sys

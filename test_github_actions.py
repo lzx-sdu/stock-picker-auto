@@ -25,6 +25,14 @@ def test_environment():
     if os.path.exists('src'):
         print("✅ src目录存在")
         print(f"src目录内容: {os.listdir('src')}")
+        
+        # 测试子目录
+        for subdir in ['strategy', 'analysis', 'utils']:
+            subdir_path = os.path.join('src', subdir)
+            if os.path.exists(subdir_path):
+                print(f"✅ {subdir}目录存在: {os.listdir(subdir_path)}")
+            else:
+                print(f"❌ {subdir}目录不存在")
     else:
         print("❌ src目录不存在")
     
@@ -39,6 +47,20 @@ def test_environment():
         print("✅ requirements.txt存在")
     else:
         print("❌ requirements.txt不存在")
+    
+    # 测试Python路径
+    print(f"Python路径: {sys.path}")
+    
+    # 测试模块导入
+    try:
+        sys.path.insert(0, 'src')
+        from strategy.bollinger_mean_reversion import BollingerMeanReversionStrategy
+        from analysis.stock_screener import StockScreener
+        from analysis.report_generator import ReportGenerator
+        from utils.config import Config
+        print("✅ 所有模块导入成功")
+    except ImportError as e:
+        print(f"❌ 模块导入失败: {e}")
     
     # 创建测试结果
     test_result = {

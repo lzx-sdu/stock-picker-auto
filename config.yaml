@@ -1,0 +1,51 @@
+# 布林带参数配置
+bollinger_bands:
+  period: 20                    # 移动平均线周期
+  std_dev: 2.0                  # 标准差倍数
+  min_touch_ratio: 0.95         # 触及下轨的最小比例
+
+# 选股条件配置
+screening:
+  # 价格条件
+  price_conditions:
+    min_price: 2.0              # 最低股价（从1.0调整到2.0）
+    max_price: 200.0            # 最高股价（从1000.0调整到200.0）
+    min_market_cap: 500000000   # 最小市值（从10亿降低到5亿）
+  
+  # 技术指标条件
+  technical_conditions:
+    rsi_oversold: 25            # RSI超卖阈值（从30降低到25）
+    rsi_overbought: 75          # RSI超买阈值（从70提高到75）
+    volume_ratio: 1.2           # 成交量放大倍数（从1.5降低到1.2）
+    macd_signal: true           # 是否使用MACD信号
+  
+  # 风险控制
+  risk_control:
+    max_drawdown: 0.15          # 最大回撤
+    stop_loss: 0.08             # 止损比例
+    take_profit: 0.20           # 止盈比例
+
+# 数据源配置
+data_sources:
+  primary: "akshare"            # 主要数据源
+  backup: "yfinance"            # 备用数据源
+  update_frequency: "daily"     # 数据更新频率
+  
+# 股票池配置
+stock_pool:
+  markets: ["sh", "sz"]         # 上海、深圳市场
+  exclude_st: true              # 排除ST股票
+  exclude_new: 30               # 排除上市不足30天的新股
+  
+# 报告配置
+reporting:
+  output_dir: "results"
+  format: ["csv", "excel", "html"]
+  include_charts: true
+  
+# 日志配置
+logging:
+  level: "INFO"
+  file: "logs/stock_picker.log"
+  max_size: "10MB"
+  backup_count: 5 
